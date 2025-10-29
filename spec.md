@@ -70,3 +70,4 @@ Use this pattern for form inputs:
     - for a `Communication` where `shouldUnderstand`, you can randomly pick an `Utterance`, simply display it as text and offer a text area where the user should try to describe what was said and a "Reveal" button then showing the `Communication` and the standard four ts-fsrs buttons (check [this](https://raw.githubusercontent.com/open-spaced-repetition/ts-fsrs/refs/heads/main/README.md) for reference. Rename "Again" as "Wrong", but apart from that: "Hard", "Correct", "Easy")
     - for a `Communication` where `shouldExpress`, show the situation context, show a `.join` element (daisy UI) to toggle between text/record/video where the user can try their best to express this situation, then a "show solutions" showing the utterances related to this situation, and again the ts-fsrs rating buttons
 - don't try to persist learning progress in any way yet, that'll come later
+

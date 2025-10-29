@@ -1,144 +1,164 @@
+# API Reference
 
-You see here a vue-next vite ts with daisy+tailwind ALREADY INSTALLED. Implement prototype according to the spec below.
+All endpoints are served under the `/api/` prefix and return JSON. Unless otherwise stated, responses use HTTP status `200 OK` on success. Error responses follow Django REST framework’s default error envelope:
 
-## Basics
-
-I want to make a language learning app. Core idea:
-
-- outcome-based
-- situation-specific ("how to haggle with a Cairo taxi driver" "how to politely open a business meeting in Japan")
-- tight timeframe possible ("my plane goes in one week")
-- actually works, not just fun engagement
-
-
-## Data Model
-
-- we have `Situation`s (e.g. "Surviving the Cairo Taxi")
-- a `Situation` has a list of `Communication`s (ordered)
-- a `Communication` has  a list of `Description`, which is a simple key-value map of `Language` (string ISO 639-3) and a str describing the situation "you greet the barista"
-- a `Communication` has a many-to-many relationship to `Utterance`
-- a `Communication` also has has two bools `shouldUnderstand` and `shouldExpress` 
-- An `Utterance` has content "السلام عليكم", one `Language`, an array of audio file pronunications, and an array of `ExtraContext`, which each `ContextType` and `Content` (e.g. "politeness level"; "mid"). 
-
-## General Structure
-
-### Public User Stuff
-
-- reasonable dashboard
-- see the available dialoglessons, filterable by language and plain-text searchable
-
-- practice situations. 
-	- pick a random `Communication`, then based on it pick one possible exercise at random
-		- for a `Communication` where `shouldUnderstand`, you can randomly pick an `Utterance`, simply display it as text and offer a text area where the user should try to describe what was said and a "Reveal" button then showing the `Communication` and the standard four ts-fsrs buttons
-		- for a `Communication` where `shouldExpress`, show the situation context, show a `.join` element (daisy UI) to toggle between text/record/video where the user can try their best to express this situation, then a "show solutions" showing the utterances related to this situation, and again the ts-fsrs rating buttons
-	- at the end of the dialog variation, show a recap of the lessons, show a textarea "what do you remember from this lesson" and a lickert scale from 1-7 rating how well the user got the lesson, used for ebisu.js rating
-
-### Community Stuff
-
-- this should be very very prototyp-y but I want to build some foundations
-- allow to request new dialogs & situations (even for non-authenticated users)
-- allow to propose-add new utterances for situations per language
-
-- none of this is publically visible per default, we need a moderation queue visible for the roles below
-
-
-### Admin Stuff
-
-- use dexie roles https://dexie.org/cloud/docs/db.roles for three roles: admin, moderator, user
-- admins/moderators get a well-contained view with the proposals/requests mentioned above which they can approve/disapprove
-- understand dexie realms; public lessons should be in the public realm, before that in the user's realm, shared in a way that mods can access it, otherwise completely private (e.g. learning progress)
-- (no further distincition between admins/mods for now)
-
-### Supporter Account
-
-- build a basic integration of lemonsqueezy, allowing a "supporter account" for $8/month. Allows your suggestion/reviews to show up on top of the queue.
-- you need to understand lemonsqueezy hooks and the dexie-cloud user table. Make sure that works properly, we can't do hot garbage here!
-
-## Learning Algorithms
-
-- utilize `ts-fsrs` to track per-utterance progress
-- use `ebisu.js` to track per-dialogvariation progress
-- keep learning progress data cleanly separated in the data model so learning lessons can be shared without being entangled with the per-user learning progress data
-
-## Essential Tech Stack
-
-
-- vue3 (latest best practices) with typescript
-- dexie with dexie-cloud (one db per user, cloud sync optional)
-- tailwind + Daisy UI. Actually use daisy components. Avoid manual CSS when possible.
-- lucide icons (via the vue package)
-- vue router
-- NO global store (dexie SSOt)
-
-- Install + setup eslint with reasonable defaults for ts+vue. Establish lint and lint:fix script. Use them implement clean code.
-
-## Architecture
-
-Do NOT!! adhere to the classic folder-by-type architecture Vue comes with.
-Instead, use the following folder structure (inspired by Feature-Sliced Design)
-
-- `app`: Stuff that MUST be global, e.g. the vue boilerplate holding the router view. Can import from anywhere, if it must. Should contain little logic.
-- `dumb`: collection of simple, reusable stuff. no business logic. may not import from ANY other high-level folder. may cross-import within the folder. put assets here (if needed)
-- `entities`: models/entities. One entity, one folder. In that, specifiy how to interact with the dexie db in question. An entity folder may NOT, NOT EVER, import another entity folder. If entities refer to one another, do so via string references to their uid. Inject repositories into pages via a function in `app/`, then pass them to features or meta-features
-- `features`: ways of interacting with entities. one folder per feature. may NOT import one another. may ONLY import from `dumb` or `entities`.
-- `meta-features`: for complex features interacting in turn with multiple `features`. One folder per meta-feature. May only import from below, and not from other meta-features
-- `pages`: One folder per page (a page is something used by the `router.ts` file). If functionality is ONLY used on a given page, put it in the page folder, do not create features or meta-features that are only used by one single page.
-
-## Guidelines
-
-- Keep design lean. Use cards, wrapper divs and containers ONLY when necessary
-- Keep style consistent across the code base
-- Setup eslint and ensure green linter (not by disabling it, but by writing clean code)
-- Keep files, functions and classes short, with a single purpose, on one abstraction layer. Split complex functionality when called for.
-- Do not hallucinate features I did not ask for
-- Keep copy and micro-copy short and to the point. Avoid waffling, avoid marketing speak, and avoid labelling everything with triple redundancy.
-- make sure UI looks neat. Always put a form input BELOW the label in a new line. Responsive design.
-
-Use this pattern for form inputs:
-
-```
-<fieldset class="fieldset">
-  <label for="page-title" class="label">Page title</label>
-  <input
-    type="text"
-    name="page-title"
-    class="input"
-    placeholder="My awesome page"
-  />
-</fieldset>
+```json
+{"detail": "<human-readable message>"}
 ```
 
-## Clarification Questions
+Date/time fields are rendered as ISO-8601 strings in UTC (e.g. `"2025-10-28T17:42:13.123456Z"`).
 
-- For the random practice flow, should users practice within a specific Situation they picked, or can the system draw Communications from the entire catalog matching their filters?
+## Authentication
 
-only within situation. for now, pick 5 exercises (after another) for the situation, then redirect to dashboard. Establish a global toast system (using daisy toasts), and in this case show a toast "Practice Done"
+No authentication is required for these endpoints in the current MVP.
 
-- What exact labels or grading scale should we use for the four ts-fsrs buttons so they align with your spaced-repetition expectations?
+## Endpoints
 
-check [this](https://raw.githubusercontent.com/open-spaced-repetition/ts-fsrs/refs/heads/main/README.md) for reference. Rename "Again" as "Wrong", but apart from that: "Hard", "Correct", "Easy"
+### 1. List all languages
 
-- When users toggle between text/record/video during `shouldExpress` exercises, do we need to capture and persist their recordings, or is this purely for on-the-spot practice?
+- **Method**: `GET`
+- **URL**: `/api/languages/`
 
-for now, capture only in local state so you can rewatch your video immediately after exercise for self-evaluation, no permanent persistence
+#### Response
 
-- Where should audio pronunciations and any uploaded media live (e.g. Dexie attachments, external storage), and in what formats do you expect them?
+```json
+[
+  {
+    "id": 1,
+    "code": "eng",
+    "name": "English"
+  },
+  {
+    "id": 2,
+    "code": "spa",
+    "name": "Spanish"
+  }
+]
+```
 
-KISS for now, just straight up in Dexie
+### 2. List situations for a given language
 
-- Do we have an initial language list or seed dataset, or should we scaffold empty data structures and sample entries for demonstration?
+- **Method**: `GET`
+- **URL**: `/api/languages/{language_code}/situations/`
+  - `language_code`: ISO-639 code that matches `Language.code`.
 
-create some hardcoded JSON in public or whatever, to scaffold some data. keep this hacky and simple; I'm going to replace this real soon.
+#### Response
 
-- For community submissions, what metadata (contact info, language, priority, etc.) must requesters provide, especially for unauthenticated users?
+Each situation includes the shared `description` text for the scenario.
 
-Take a best guess for a simple proof of concept here; we're going to enhance this soon anyways
+```json
+[
+  {
+    "id": 12,
+    "last_updated": "2025-10-28T17:35:54.971538Z",
+    "image_url": "https://cdn.example/situation-12.jpg",
+    "language_code": "eng",
+    "description": "Meeting someone for the first time."
+  }
+]
+```
 
-- In the moderation queue, what actions and filtering capabilities are required beyond approve/decline (e.g. edit suggestions, leave notes, prioritize supporter items)?
+### 3. Situation bundle (filtered by language pair)
 
+- **Method**: `GET`
+- **URL**: `/api/situations/{situation_id}/`
+  - `situation_id`: numeric `Situation` primary key.
+- **Required query parameters**:
+  - `target_lang`: ISO-639 code (must match `Language.code`) representing the learner’s *target* language.
+  - `native_lang`: ISO-639 code representing the learner’s *native* language.
 
-nothing. just approve/decline for now, will be reworked soon
+If either query parameter is missing, the API returns `400` with an explanatory message.
 
-- For the Lemonsqueezy supporter tier, should the subscription status unlock any additional UI beyond queue prioritization (e.g. badges, dashboard sections), and do we need to handle failed or canceled payments differently?
+#### Response
 
-no yet. do bare minimum payment handling, using as little custom logic as possible.
+The payload aggregates all content relevant to the situation for the provided language pair:
+
+```json
+{
+  "situation": {
+    "id": 12,
+    "last_updated": "2025-10-28T17:35:54.971538Z",
+    "image_url": "https://cdn.example/situation-12.jpg",
+    "language": "eng",
+    "description": "Meeting someone for the first time."
+  },
+  "prompts": [
+    {
+      "id": 7,
+      "last_updated": "2025-10-28T17:35:54.971538Z",
+      "description": "Greet a new acquaintance politely."
+    }
+  ],
+  "communications": [
+    {
+      "id": 30,
+      "last_updated": "2025-10-28T17:35:54.971538Z",
+      "shouldBeExpressed": true,
+      "shouldBeUnderstood": false,
+      "description": "Small talk opener.",
+      "utterances": [
+        {
+          "id": 111,
+          "last_updated": "2025-10-28T17:35:54.971538Z",
+          "language": "spa",
+          "transliteration": "o-la",
+          "content": "Hola, ¿cómo estás?",
+          "contexts": [
+            {
+              "id": 501,
+              "context_type": "politeness",
+              "context_type_details": {
+                "id": 4,
+                "name": "politeness",
+                "description": "Used in polite contexts."
+              },
+              "description": "Suitable for informal greetings."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Rules applied:
+
+- `situation.language` in the response echoes the `native_lang` query parameter for backward compatibility.
+- Descriptions are no longer language-specific; the same text is returned regardless of the requested `native_lang`.
+- `communications` are included only if they reference at least one `Utterance` in `target_lang`.
+- Each `communication.utterances` array contains only the `target_lang` utterances.
+- `context_type_details` is populated when a `ContextType` exists with `name` matching the context’s `context_type`. Its `description` mirrors the stored context-type text. When no match exists, the field is `null`.
+
+#### Error responses
+
+- `404 Not Found` if the situation id does not exist.
+- `404 Not Found` if the situation has no communications with utterances in the requested `target_lang`.
+- `400 Bad Request` if `target_lang` or `native_lang` is missing.
+
+## Setup Notes
+
+This project depends on Django REST framework. After updating dependencies (`pyproject.toml`), install them locally:
+
+```bash
+poetry install
+```
+
+Run migrations as usual:
+
+```bash
+poetry run python manage.py migrate
+```
+
+## Example Usage
+
+```bash
+# Fetch all languages
+curl http://localhost:8000/api/languages/
+
+# Fetch situations for English learners
+curl http://localhost:8000/api/languages/eng/situations/
+
+# Fetch the localized bundle for situation 12, target Spanish, native English
+curl "http://localhost:8000/api/situations/12/?target_lang=spa&native_lang=eng"
+```

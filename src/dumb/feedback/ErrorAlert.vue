@@ -1,0 +1,7 @@
+<template>
+  <div class="alert alert-error">
+    <span>
+      <slot />
+    </span>
+  </div>
+</template>
